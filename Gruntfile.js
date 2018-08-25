@@ -23,7 +23,7 @@ grunt.initConfig( {
 	}
 } );
 
-grunt.registerTask( "build-index", function() {
+grunt.registerTask( "generate-pages", function() {
 	var rversion = /^(\d+)\.(\d+)(?:\.(\d+))?-?(.*)$/;
 
 	function normalizeVersion( version ) {
@@ -433,12 +433,36 @@ grunt.registerTask( "ensure-wordpress-config", function() {
 	} );
 } );
 
+grunt.registerTask( "git-status", function () {
+	var done = this.async();
+	// Are there unstaged changes?
+	require( "child_process" ).exec( "git ls-files --modified", function ( err, stdout, stderr ) {
+		var ret = err || stderr || stdout;
+		if ( ret ) {
+			grunt.log.error( "Found modified files:" );
+			grunt.log.error( "" );
+			grunt.log.error( ret );
+			grunt.log.error( "" );
+			grunt.log.error( "Use 'npm run prepare' to apply these changes." );
+		} else {
+			grunt.log.ok( "All clear!" );
+			done();
+		}
+	} );
+} );
+
+// Use "npm run generate" to generate SRI directives and update HTML pages.
 grunt.registerTask( "sri-generate", ["ensure-dist-resources", "sri:generate"] );
+grunt.registerTask( "generate", ["sri-generate", "generate-pages"] );
+
+// The "npm test" command is run in CI.
+// It confirms that the generate step was run (if needed).
+grunt.registerTask( "test", ["generate", "git-status"] );
 
 // The "grunt deploy" command is automatically invoked on git-commit by the server that
 // will deploy the WordPress site.
 // Task tree: "deploy" > "wordpress-deploy" > "build-wordpress" > "build".
-grunt.registerTask( "build", ["sri-generate", "build-index"] );
+grunt.registerTask( "build", [] );
 grunt.registerTask( "deploy", ["ensure-wordpress-config", "wordpress-deploy", "reload-listings"] );
 
 };
